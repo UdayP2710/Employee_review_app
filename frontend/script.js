@@ -1,11 +1,15 @@
 import { api } from "./api.js";
 document.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("login-form");
+  const registerdiv = document.getElementById("register");
   const adminDashboard = document.getElementById("admin-dashboard");
   const employeeDashboard = document.getElementById("employee-dashboard");
   const employeeForm = document.getElementById("employee-form");
   const reviewForm = document.getElementById("review-form");
   const feedbackForm = document.getElementById("feedback-form");
+  const employe_edit_form = document.getElementById("employee-edit-form");
+  const logindashboard = document.getElementById("login-dashboard");
+  const assignReviewerform = document.getElementById("assign-reviewer");
   let currentUser = null;
   // Helper functions
   const showElement = (element) => (element.style.display = "block");
@@ -14,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentUser = null;
     hideElement(adminDashboard);
     hideElement(employeeDashboard);
-    showElement(loginForm);
+    showElement(logindashboard);
   };
   const loadEmployees = async () => {
     const employees = await api.getAllEmployees();
@@ -57,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .map(
         (review) => `
             <li>
-                Review for ${review.employee.name}
+                 Review for ${review.employee.name}
                 <ul>
                     ${review.feedback
                       .map(
@@ -73,13 +77,14 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
   };
   const loadFeedbacks = async () => {
-    const reviews = await api.getReviewsForReviewer(currentUser._id);
+    // const reviews = await api.getReviewsForReviewer(currentUser._id);
+    const employees = await api.getAllEmployees();
     const feedbackReviewSelect = document.getElementById("feedback-review");
     const feedbackList = document.getElementById("feedback-list");
-    feedbackReviewSelect.innerHTML = reviews
+    feedbackReviewSelect.innerHTML = employees
       .map(
-        (review) => `
-            <option value="${review._id}">Review for ${review.employee.name}</option>
+        (employ) => `
+            <option value="${employ._id}">Review for ${employ.name}</option>
         `
       )
       .join("");
@@ -112,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log(user);
     if (user.status === true) {
       currentUser = user.user;
-      hideElement(loginForm);
+      hideElement(logindashboard);
       if (currentUser.role === "admin") {
         showElement(adminDashboard);
         loadEmployees();
@@ -130,18 +135,17 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const name = document.getElementById("employee-name").value;
     const email = document.getElementById("employee-email").value;
+    const password = document.getElementById("employee-password").value;
     const role = document.getElementById("employee-role").value;
-    await api.addEmployee({ name, email, role });
+    await api.addEmployee({ name, email, password, role });
     loadEmployees();
   });
 
   reviewForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const employeeId = document.getElementById("review-employee").value;
-    const reviewerIds = Array.from(
-      document.getElementById("review-reviewers").selectedOptions
-    ).map((option) => option.value);
-    await api.createReview({ employeeId, reviewerIds });
+    const reviewerid = document.getElementById("review-reviewers").value;
+    await api.createReview({ employeeId, reviewerid });
     loadReviews();
   });
 
@@ -153,19 +157,26 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFeedbacks();
   });
 
+  assignReviewerform.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const reviewid = document.getElementById("review-id").value;
+    const reviewerId = document.getElementById("reviewer-id").value;
+    await api.assignReviewer(reviewid, reviewerId);
+  });
+
   window.editEmployee = async (id) => {
-    const employee = await api.getEmployeeById(id);
-    document.getElementById("employee-name").value = employee.name;
-    document.getElementById("employee-email").value = employee.email;
-    document.getElementById("employee-role").value = employee.role;
-    employeeForm.onsubmit = async (e) => {
+    showElement(employe_edit_form);
+    hideElement(adminDashboard);
+    employe_edit_form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const name = document.getElementById("employee-name").value;
-      const email = document.getElementById("employee-email").value;
-      const role = document.getElementById("employee-role").value;
+      const name = document.getElementById("employee-edit-name").value;
+      const email = document.getElementById("employee-edit-email").value;
+      const role = document.getElementById("employee-edit-role").value;
       await api.updateEmployee(id, { name, email, role });
+      hideElement(employe_edit_form);
+      showElement(adminDashboard);
       loadEmployees();
-    };
+    });
   };
 
   window.deleteEmployee = async (id) => {
